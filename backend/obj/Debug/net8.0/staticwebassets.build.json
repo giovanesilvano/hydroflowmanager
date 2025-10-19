@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "rqAGXtyAYvGxq6kzhhTDxT2RrtqXX4EcDtThRBHSsls=",
+  "Source": "HydroFlowManager.API",
+  "BasePath": "_content/HydroFlowManager.API",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}

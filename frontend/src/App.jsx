@@ -1,0 +1,1 @@
+﻿import React, {useState} from 'react'; import Login from './pages/Login'; import Clients from './pages/Clients'; export default function App(){ const [token,setToken]=useState(null); return (<div className='container'>{!token ? <Login onLogin={setToken}/> : <Clients token={token} onLogout={()=>setToken(null)}/>}</div>); }
