@@ -1,0 +1,335 @@
+### HydroFlow Manager - API Tests
+### Base URL
+@baseUrl = http://localhost:5000/
+@token = 
+
+### ============================================
+### AUTHENTICATION
+### ============================================
+
+### 1. Login - Obter Token JWT
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### ============================================
+### CLIENTS (Clientes)
+### ============================================
+
+### 2. Listar todos os clientes
+GET {{baseUrl}}/clients
+Authorization: Bearer {{token}}
+
+### 3. Buscar cliente por ID
+GET {{baseUrl}}/clients/1
+Authorization: Bearer {{token}}
+
+### 4. Criar novo cliente
+POST {{baseUrl}}/clients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "João Silva",
+  "cpf": "123.456.789-00",
+  "phone": "(11) 98765-4321",
+  "email": "joao.silva@email.com",
+  "address": "Rua das Flores, 123"
+}
+
+### 5. Atualizar cliente
+PUT {{baseUrl}}/clients/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "João Silva Santos",
+  "cpf": "123.456.789-00",
+  "phone": "(11) 98765-4321",
+  "email": "joao.santos@email.com",
+  "address": "Rua das Flores, 123 - Apto 45"
+}
+
+### 6. Deletar cliente
+DELETE {{baseUrl}}/clients/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### VEHICLES (Veículos)
+### ============================================
+
+### 7. Listar todos os veículos
+GET {{baseUrl}}/vehicles
+Authorization: Bearer {{token}}
+
+### 8. Buscar veículo por ID
+GET {{baseUrl}}/vehicles/1
+Authorization: Bearer {{token}}
+
+### 9. Buscar veículos por cliente
+GET {{baseUrl}}/vehicles/client/1
+Authorization: Bearer {{token}}
+
+### 10. Criar novo veículo
+POST {{baseUrl}}/vehicles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "plate": "ABC-1234",
+  "model": "Honda Civic",
+  "year": 2022,
+  "color": "Preto",
+  "clientId": 1
+}
+
+### 11. Atualizar veículo
+PUT {{baseUrl}}/vehicles/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "plate": "ABC-1234",
+  "model": "Honda Civic EX",
+  "year": 2022,
+  "color": "Preto Metálico",
+  "clientId": 1
+}
+
+### 12. Deletar veículo
+DELETE {{baseUrl}}/vehicles/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### SERVICES (Serviços)
+### ============================================
+
+### 13. Listar todos os serviços
+GET {{baseUrl}}/services
+Authorization: Bearer {{token}}
+
+### 14. Buscar serviço por ID
+GET {{baseUrl}}/services/1
+Authorization: Bearer {{token}}
+
+### 15. Criar novo serviço
+POST {{baseUrl}}/services
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Lavagem Completa",
+  "description": "Lavagem externa e interna do veículo",
+  "price": 80.00
+}
+
+### 16. Criar serviço - Polimento
+POST {{baseUrl}}/services
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Polimento",
+  "description": "Polimento e cristalização da pintura",
+  "price": 250.00
+}
+
+### 17. Criar serviço - Higienização
+POST {{baseUrl}}/services
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Higienização Interna",
+  "description": "Limpeza profunda do interior",
+  "price": 120.00
+}
+
+### 18. Atualizar serviço
+PUT {{baseUrl}}/services/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Lavagem Completa Premium",
+  "description": "Lavagem externa e interna com cera",
+  "price": 100.00
+}
+
+### 19. Deletar serviço
+DELETE {{baseUrl}}/services/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### ATTENDANTS (Atendentes)
+### ============================================
+
+### 20. Listar todos os atendentes
+GET {{baseUrl}}/attendants
+Authorization: Bearer {{token}}
+
+### 21. Buscar atendente por ID
+GET {{baseUrl}}/attendants/1
+Authorization: Bearer {{token}}
+
+### 22. Criar novo atendente
+POST {{baseUrl}}/attendants
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maria Santos",
+  "phone": "(11) 91234-5678"
+}
+
+### 23. Atualizar atendente
+PUT {{baseUrl}}/attendants/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "name": "Maria Santos Silva",
+  "phone": "(11) 91234-5678"
+}
+
+### 24. Deletar atendente
+DELETE {{baseUrl}}/attendants/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### ORDERS (Ordens de Serviço)
+### ============================================
+
+### 25. Listar todas as ordens
+GET {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+
+### 26. Buscar ordem por ID
+GET {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+
+### 27. Criar nova ordem de serviço
+POST {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehicleId": 1,
+  "attendantId": 1,
+  "serviceIds": [1, 2],
+  "observations": "Cliente solicitou atenção especial nos bancos"
+}
+
+### 28. Criar ordem com múltiplos serviços
+POST {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehicleId": 1,
+  "attendantId": 1,
+  "serviceIds": [1, 2, 3],
+  "observations": "Veículo com muito tempo sem manutenção"
+}
+
+### 29. Atualizar ordem de serviço
+PUT {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "vehicleId": 1,
+  "attendantId": 1,
+  "serviceIds": [1, 2, 3],
+  "totalPrice": 450.00,
+  "status": "Em Andamento",
+  "observations": "Cliente solicitou entrega até 18h"
+}
+
+### 30. Atualizar status da ordem para "Concluído"
+PUT {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1,
+  "vehicleId": 1,
+  "attendantId": 1,
+  "serviceIds": [1, 2],
+  "totalPrice": 330.00,
+  "status": "Concluído",
+  "observations": "Serviço finalizado com sucesso"
+}
+
+### 31. Deletar ordem
+DELETE {{baseUrl}}/orders/1
+Authorization: Bearer {{token}}
+
+### ============================================
+### CASH SUMMARY (Resumo de Caixa)
+### ============================================
+
+### 32. Obter resumo de caixa - Hoje
+GET {{baseUrl}}/orders/cash-summary?period=today
+Authorization: Bearer {{token}}
+
+### 33. Obter resumo de caixa - Esta Semana
+GET {{baseUrl}}/orders/cash-summary?period=week
+Authorization: Bearer {{token}}
+
+### 34. Obter resumo de caixa - Este Mês
+GET {{baseUrl}}/orders/cash-summary?period=month
+Authorization: Bearer {{token}}
+
+### 35. Obter resumo de caixa - Este Ano
+GET {{baseUrl}}/orders/cash-summary?period=year
+Authorization: Bearer {{token}}
+
+### ============================================
+### TESTES DE VALIDAÇÃO E ERROS
+### ============================================
+
+### 36. Teste - Login com credenciais inválidas
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "invalid",
+  "password": "wrong"
+}
+
+### 37. Teste - Acesso sem token
+GET {{baseUrl}}/clients
+
+### 38. Teste - Criar cliente sem dados obrigatórios
+POST {{baseUrl}}/clients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": ""
+}
+
+### 39. Teste - Buscar recurso inexistente
+GET {{baseUrl}}/clients/99999
+Authorization: Bearer {{token}}
+
+### 40. Teste - Criar ordem sem serviços
+POST {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "vehicleId": 1,
+  "attendantId": 1,
+  "serviceIds": []
+}

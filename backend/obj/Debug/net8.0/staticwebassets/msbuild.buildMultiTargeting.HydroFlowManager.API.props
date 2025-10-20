@@ -1,3 +1,3 @@
 ﻿<Project>
-  <Import Project="..\build\HydroFlowManager.API.props" />
+  <Import Project="../build/HydroFlowManager.API.props" />
 </Project>

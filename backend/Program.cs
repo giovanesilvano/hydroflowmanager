@@ -171,7 +171,7 @@ app.MapDelete("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] a
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
-app.MapGet("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => 
+app.MapGet("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) =>
     await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).ToListAsync());
 app.MapGet("/orders/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, AppDbContext db) =>
 {
@@ -236,6 +236,7 @@ app.MapGet("/cash/summary", [Microsoft.AspNetCore.Authorization.Authorize] async
     var byService = orders.SelectMany(o => o.Items).GroupBy(i => i.ServiceId).Select(g => new { ServiceId = g.Key, Quantity = g.Sum(i => i.Quantity), Total = g.Sum(i => i.UnitPrice * i.Quantity) }).ToList();
     return Results.Ok(new { Date = target, TotalOrders = totalOrders, TotalReceita = totalReceita, TotalDescontos = totalDescontos, ByPayment = byPayment, ByService = byService });
 });
+
 app.Run();
 
 static class SecurityHelper
