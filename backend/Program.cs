@@ -53,6 +53,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 builder.Services.AddAuthorization();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
@@ -70,6 +79,7 @@ using (var scope = app.Services.CreateScope())
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapPost("/auth/login", async (LoginDto dto, AppDbContext db) =>
@@ -88,6 +98,25 @@ app.MapPost("/clients", [Microsoft.AspNetCore.Authorization.Authorize] async (Cl
     await db.SaveChangesAsync();
     return Results.Created($"/clients/{c.CPFCNPJ}", c);
 });
+app.MapPut("/clients/{cpfcnpj}", [Microsoft.AspNetCore.Authorization.Authorize] async (string cpfcnpj, Client updated, AppDbContext db) =>
+{
+    var client = await db.Clients.FindAsync(cpfcnpj);
+    if (client is null) return Results.NotFound("Cliente não encontrado");
+    client.Name = updated.Name;
+    client.Email = updated.Email;
+    client.Phone = updated.Phone;
+    client.Observations = updated.Observations;
+    await db.SaveChangesAsync();
+    return Results.Ok(client);
+});
+app.MapDelete("/clients/{cpfcnpj}", [Microsoft.AspNetCore.Authorization.Authorize] async (string cpfcnpj, AppDbContext db) =>
+{
+    var client = await db.Clients.FindAsync(cpfcnpj);
+    if (client is null) return Results.NotFound("Cliente não encontrado");
+    db.Clients.Remove(client);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 app.MapGet("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => await db.Vehicles.Include(v => v.Client).ToListAsync());
 app.MapPost("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (Vehicle v, AppDbContext db) =>
 {
@@ -96,12 +125,59 @@ app.MapPost("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (V
     await db.SaveChangesAsync();
     return Results.Created($"/vehicles/{v.Plate}", v);
 });
+app.MapPut("/vehicles/{plate}", [Microsoft.AspNetCore.Authorization.Authorize] async (string plate, Vehicle updated, AppDbContext db) =>
+{
+    var vehicle = await db.Vehicles.FindAsync(plate);
+    if (vehicle is null) return Results.NotFound("Veículo não encontrado");
+    if (await db.Clients.FindAsync(updated.ClientId) is null) return Results.BadRequest("Cliente não encontrado");
+    vehicle.Type = updated.Type;
+    vehicle.ClientId = updated.ClientId;
+    await db.SaveChangesAsync();
+    return Results.Ok(vehicle);
+});
+app.MapDelete("/vehicles/{plate}", [Microsoft.AspNetCore.Authorization.Authorize] async (string plate, AppDbContext db) =>
+{
+    var vehicle = await db.Vehicles.FindAsync(plate);
+    if (vehicle is null) return Results.NotFound("Veículo não encontrado");
+    db.Vehicles.Remove(vehicle);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 app.MapGet("/services", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => await db.Services.ToListAsync());
 app.MapPost("/services", [Microsoft.AspNetCore.Authorization.Authorize] async (Service s, AppDbContext db) =>
 {
     db.Services.Add(s);
     await db.SaveChangesAsync();
     return Results.Created($"/services/{s.Id}", s);
+});
+app.MapPut("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (int id, Service updated, AppDbContext db) =>
+{
+    var service = await db.Services.FindAsync(id);
+    if (service is null) return Results.NotFound("Serviço não encontrado");
+    service.Name = updated.Name;
+    service.PriceMotorcycle = updated.PriceMotorcycle;
+    service.PriceCarSmall = updated.PriceCarSmall;
+    service.PriceCarLarge = updated.PriceCarLarge;
+    service.DurationMinutes = updated.DurationMinutes;
+    service.Active = updated.Active;
+    await db.SaveChangesAsync();
+    return Results.Ok(service);
+});
+app.MapDelete("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (int id, AppDbContext db) =>
+{
+    var service = await db.Services.FindAsync(id);
+    if (service is null) return Results.NotFound("Serviço não encontrado");
+    db.Services.Remove(service);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
+app.MapGet("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => 
+    await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).ToListAsync());
+app.MapGet("/orders/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, AppDbContext db) =>
+{
+    var order = await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).FirstOrDefaultAsync(o => o.Id == id);
+    if (order is null) return Results.NotFound("Ordem não encontrada");
+    return Results.Ok(order);
 });
 app.MapPost("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (OrderCreateDto dto, AppDbContext db) =>
 {
@@ -133,15 +209,32 @@ app.MapPost("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (Ord
     await db.SaveChangesAsync();
     return Results.Created($"/orders/{order.Id}", order);
 });
+app.MapPut("/orders/{id}/status", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, OrderStatus status, AppDbContext db) =>
+{
+    var order = await db.Orders.FindAsync(id);
+    if (order is null) return Results.NotFound("Ordem não encontrada");
+    order.Status = status;
+    await db.SaveChangesAsync();
+    return Results.Ok(order);
+});
+app.MapDelete("/orders/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, AppDbContext db) =>
+{
+    var order = await db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id);
+    if (order is null) return Results.NotFound("Ordem não encontrada");
+    db.Orders.Remove(order);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+});
 app.MapGet("/cash/summary", [Microsoft.AspNetCore.Authorization.Authorize] async (DateTime? date, AppDbContext db) =>
 {
     var target = date?.Date ?? DateTime.UtcNow.Date;
-    var list = await db.Orders.Where(o => o.CreatedAt.Date == target).ToListAsync();
-    var totalOrders = list.Count;
-    var totalReceita = list.Sum(x => x.Total);
-    var totalDescontos = list.Sum(x => x.Discount);
-    var byPayment = list.GroupBy(x => x.PaymentMethod).Select(g => new { Payment = g.Key.ToString(), Total = g.Sum(x => x.Total) }).ToList();
-    return Results.Ok(new { Date = target, TotalOrders = totalOrders, TotalReceita = totalReceita, TotalDescontos = totalDescontos, ByPayment = byPayment });
+    var orders = await db.Orders.Include(o => o.Items).Where(o => o.CreatedAt.Date == target).ToListAsync();
+    var totalOrders = orders.Count;
+    var totalReceita = orders.Sum(x => x.Total);
+    var totalDescontos = orders.Sum(x => x.Discount);
+    var byPayment = orders.GroupBy(x => x.PaymentMethod).Select(g => new { Payment = g.Key.ToString(), Total = g.Sum(x => x.Total) }).ToList();
+    var byService = orders.SelectMany(o => o.Items).GroupBy(i => i.ServiceId).Select(g => new { ServiceId = g.Key, Quantity = g.Sum(i => i.Quantity), Total = g.Sum(i => i.UnitPrice * i.Quantity) }).ToList();
+    return Results.Ok(new { Date = target, TotalOrders = totalOrders, TotalReceita = totalReceita, TotalDescontos = totalDescontos, ByPayment = byPayment, ByService = byService });
 });
 app.Run();
 
