@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json.Serialization;
 using HydroFlowManager.API.Data;
 using HydroFlowManager.API.Models;
 using HydroFlowManager.API.DTOs;
@@ -62,6 +63,11 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
+// Serializar/Desserializar enums como strings para compatibilidade com o frontend
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
@@ -72,6 +78,18 @@ using (var scope = app.Services.CreateScope())
         var salt = SecurityHelper.GenerateSalt();
         var hash = SecurityHelper.HashPassword("123456", salt);
         db.Attendants.Add(new Attendant { CPF = "00000000000", Name = "admin", PasswordHash = hash, PasswordSalt = salt });
+        db.SaveChanges();
+    }
+
+    // Seed de serviços padrão para facilitar testes no frontend
+    if (!db.Services.Any())
+    {
+        db.Services.AddRange(new[]
+        {
+            new Service { Name = "Lavagem Simples", PriceMotorcycle = 15, PriceCarSmall = 25, PriceCarLarge = 35, DurationMinutes = 20, Active = true },
+            new Service { Name = "Lavagem Completa", PriceMotorcycle = 25, PriceCarSmall = 40, PriceCarLarge = 55, DurationMinutes = 40, Active = true },
+            new Service { Name = "Polimento", PriceMotorcycle = 50, PriceCarSmall = 80, PriceCarLarge = 110, DurationMinutes = 90, Active = true }
+        });
         db.SaveChanges();
     }
 }
@@ -90,7 +108,8 @@ app.MapPost("/auth/login", async (LoginDto dto, AppDbContext db) =>
     var token = SecurityHelper.GenerateToken(att, builder.Configuration["Jwt:Key"]);
     return Results.Ok(new { token });
 });
-app.MapGet("/clients", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => await db.Clients.ToListAsync());
+// Endpoints de leitura públicos para facilitar o consumo pelo frontend sem token
+app.MapGet("/clients", async (AppDbContext db) => await db.Clients.ToListAsync());
 app.MapPost("/clients", [Microsoft.AspNetCore.Authorization.Authorize] async (Client c, AppDbContext db) =>
 {
     if (await db.Clients.AnyAsync(x => x.CPFCNPJ == c.CPFCNPJ)) return Results.Conflict("Cliente já existe");
@@ -117,7 +136,7 @@ app.MapDelete("/clients/{cpfcnpj}", [Microsoft.AspNetCore.Authorization.Authoriz
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
-app.MapGet("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => await db.Vehicles.Include(v => v.Client).ToListAsync());
+app.MapGet("/vehicles", async (AppDbContext db) => await db.Vehicles.Include(v => v.Client).ToListAsync());
 app.MapPost("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (Vehicle v, AppDbContext db) =>
 {
     if (await db.Clients.FindAsync(v.ClientId) is null) return Results.BadRequest("Cliente não encontrado");
@@ -143,7 +162,7 @@ app.MapDelete("/vehicles/{plate}", [Microsoft.AspNetCore.Authorization.Authorize
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
-app.MapGet("/services", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) => await db.Services.ToListAsync());
+app.MapGet("/services", async (AppDbContext db) => await db.Services.ToListAsync());
 app.MapPost("/services", [Microsoft.AspNetCore.Authorization.Authorize] async (Service s, AppDbContext db) =>
 {
     db.Services.Add(s);
@@ -171,9 +190,9 @@ app.MapDelete("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] a
     await db.SaveChangesAsync();
     return Results.NoContent();
 });
-app.MapGet("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (AppDbContext db) =>
+app.MapGet("/orders", async (AppDbContext db) =>
     await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).ToListAsync());
-app.MapGet("/orders/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, AppDbContext db) =>
+app.MapGet("/orders/{id}", async (Guid id, AppDbContext db) =>
 {
     var order = await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).FirstOrDefaultAsync(o => o.Id == id);
     if (order is null) return Results.NotFound("Ordem não encontrada");

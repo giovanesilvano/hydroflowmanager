@@ -13,7 +13,7 @@ export default function Services({ token }) {
     async function fetchServices() {
         try {
             const res = await axios.get('http://localhost:5000/services', { headers: { Authorization: 'Bearer ' + token } });
-            setList(res.data);
+            setList(res.data || []);
         } catch (e) {
             alert('Erro ao buscar serviços');
         }
@@ -57,11 +57,11 @@ export default function Services({ token }) {
         setEditing(service.id);
         setForm({
             name: service.name,
-            priceMotorcycle: service.priceMotorcycle,
-            priceCarSmall: service.priceCarSmall,
-            priceCarLarge: service.priceCarLarge,
-            durationMinutes: service.durationMinutes,
-            active: service.active
+            priceMotorcycle: service.priceMotorcycle ?? '',
+            priceCarSmall: service.priceCarSmall ?? '',
+            priceCarLarge: service.priceCarLarge ?? '',
+            durationMinutes: service.durationMinutes ?? '',
+            active: service.active !== false
         });
     }
 
@@ -104,11 +104,11 @@ export default function Services({ token }) {
                     {list.map(s => (
                         <tr key={s.id}>
                             <td>{s.name}</td>
-                            <td>R$ {s.priceMotorcycle.toFixed(2)}</td>
-                            <td>R$ {s.priceCarSmall.toFixed(2)}</td>
-                            <td>R$ {s.priceCarLarge.toFixed(2)}</td>
-                            <td>{s.durationMinutes} min</td>
-                            <td>{s.active ? 'Ativo' : 'Inativo'}</td>
+                            <td>R$ {Number.isFinite(Number(s.priceMotorcycle)) ? Number(s.priceMotorcycle).toFixed(2) : '0.00'}</td>
+                            <td>R$ {Number.isFinite(Number(s.priceCarSmall)) ? Number(s.priceCarSmall).toFixed(2) : '0.00'}</td>
+                            <td>R$ {Number.isFinite(Number(s.priceCarLarge)) ? Number(s.priceCarLarge).toFixed(2) : '0.00'}</td>
+                            <td>{Number.isFinite(Number(s.durationMinutes)) ? Number(s.durationMinutes) : 0} min</td>
+                            <td>{s.active !== false ? 'Ativo' : 'Inativo'}</td>
                             <td>
                                 <button onClick={() => handleEdit(s)}>Editar</button>
                                 <button onClick={() => handleDelete(s.id)}>Excluir</button>

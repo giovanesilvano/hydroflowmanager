@@ -37,7 +37,8 @@ export default function Orders({ token }) {
     async function fetchServices() {
         try {
             const res = await axios.get('http://localhost:5000/services', { headers: { Authorization: 'Bearer ' + token } });
-            setServices(res.data.filter(s => s.active));
+            // Se o backend não retornar "active" ou retornar nulo, considerar como disponível
+            setServices((res.data || []).filter(s => s.active !== false));
         } catch (e) {
             alert('Erro ao buscar serviços');
         }
@@ -50,10 +51,17 @@ export default function Orders({ token }) {
             return;
         }
         try {
+            const normalizedItems = (form.items || [])
+                .map(it => ({
+                    ServiceId: Number.parseInt(it.serviceId),
+                    Quantity: Math.max(1, Number.parseInt(it.quantity))
+                }))
+                .filter(it => Number.isFinite(it.ServiceId) && Number.isFinite(it.Quantity) && it.ServiceId > 0);
+
             await axios.post('http://localhost:5000/orders', {
                 VehiclePlate: form.vehiclePlate,
-                PaymentMethod: parseInt(form.paymentMethod),
-                Items: form.items,
+                PaymentMethod: Number.parseInt(form.paymentMethod),
+                Items: normalizedItems,
                 AttendantCPF: '00000000000'
             }, { headers: { Authorization: 'Bearer ' + token } });
             setForm({ vehiclePlate: '', paymentMethod: 0, items: [] });
@@ -76,7 +84,7 @@ export default function Orders({ token }) {
 
     async function handleUpdateStatus(id, status) {
         try {
-            await axios.put(`http://localhost:5000/orders/${id}/status`, status, {
+            await axios.put(`http://localhost:5000/orders/${id}/status`, { Status: Number.parseInt(status) }, {
                 headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
             });
             fetchOrders();
@@ -108,6 +116,11 @@ export default function Orders({ token }) {
     function getPaymentName(method) {
         const methods = ['Dinheiro', 'PIX', 'Cartão Crédito', 'Cartão Débito'];
         return methods[method] || 'Desconhecido';
+    }
+
+    function formatMoney(v) {
+        const n = Number.isFinite(Number(v)) ? Number(v) : 0;
+        return n.toFixed(2);
     }
 
     return (
@@ -161,13 +174,13 @@ export default function Orders({ token }) {
                 </thead>
                 <tbody>
                     {list.map(o => (
-                        <tr key={o.id}>
-                            <td>{o.id.substring(0, 8)}...</td>
+                        <tr key={o.id || Math.random()}>
+                            <td>{(o.id || '').substring(0, 8)}...</td>
                             <td>{o.vehiclePlate}</td>
                             <td>{o.vehicle?.client?.name || 'N/A'}</td>
-                            <td>R$ {o.subtotal.toFixed(2)}</td>
-                            <td>R$ {o.discount.toFixed(2)}</td>
-                            <td>R$ {o.total.toFixed(2)}</td>
+                            <td>R$ {formatMoney(o.subtotal)}</td>
+                            <td>R$ {formatMoney(o.discount)}</td>
+                            <td>R$ {formatMoney(o.total)}</td>
                             <td>{getPaymentName(o.paymentMethod)}</td>
                             <td>{getStatusName(o.status)}</td>
                             <td>

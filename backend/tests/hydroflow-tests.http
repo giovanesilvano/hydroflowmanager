@@ -12,8 +12,8 @@ POST {{baseUrl}}/auth/login
 Content-Type: application/json
 
 {
-  "username": "admin",
-  "password": "admin123"
+  "login": "00000000000",
+  "password": "123456"
 }
 
 ### ============================================
