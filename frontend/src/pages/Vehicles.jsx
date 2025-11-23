@@ -33,29 +33,32 @@ export default function Vehicles({ token }) {
     }
 
     async function handleSubmit(e) {
-        e.preventDefault();
-        try {
-            if (editing) {
-                await axios.put(`http://localhost:5000/vehicles/${editing}`, {
-                    plate: form.plate,
-                    type: parseInt(form.type),
-                    clientCpfCnpj: form.clientId  // ✅ Mudança aqui
-                }, { headers: { Authorization: 'Bearer ' + token } });
-                setEditing(null);
-            } else {
-                await axios.post('http://localhost:5000/vehicles', {
-                    plate: form.plate,
-                    type: parseInt(form.type),
-                    clientCpfCnpj: form.clientId  // ✅ Mudança aqui
-                }, { headers: { Authorization: 'Bearer ' + token } });
-            }
-            setForm({ plate: '', type: 0, clientId: '' });
-            fetchVehicles();
-        } catch (e) {
-            console.error('Erro detalhado:', e.response?.data);  // ✅ Melhor tratamento de erro
-            alert('Erro ao salvar veículo: ' + (e.response?.data || e.message));
+    e.preventDefault();
+    try {
+        const payload = {
+            plate: form.plate,
+            type: parseInt(form.type),
+            clientCpfCnpj: form.clientId   // 👈 nome EXATO
+        };
+
+        if (editing) {
+            await axios.put(`http://localhost:5000/vehicles/${editing}`, payload, {
+                headers: { Authorization: 'Bearer ' + token }
+            });
+            setEditing(null);
+        } else {
+            await axios.post('http://localhost:5000/vehicles', payload, {
+                headers: { Authorization: 'Bearer ' + token }
+            });
         }
+
+        setForm({ plate: '', type: 0, clientId: '' });
+        fetchVehicles();
+    } catch (e) {
+        console.error('Erro detalhado:', e.response?.data || e);
+        alert('Erro ao salvar veículo: ' + (e.response?.data || e.message));
     }
+}
 
     async function handleDelete(plate) {
         if (!confirm('Deseja realmente excluir este veículo?')) return;

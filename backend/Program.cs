@@ -68,15 +68,16 @@ builder.Services.AddAuthorization();
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    
+
     // ✅ Aplica migrations pendentes automaticamente
     db.Database.Migrate();
-    
+
     if (!db.Attendants.Any())
     {
         var salt = SecurityHelper.GenerateSalt();
@@ -142,7 +143,8 @@ app.MapDelete("/clients/{cpfcnpj}", [Microsoft.AspNetCore.Authorization.Authoriz
 app.MapGet("/vehicles", async (AppDbContext db) => await db.Vehicles.Include(v => v.Client).ToListAsync());
 app.MapPost("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (Vehicle v, AppDbContext db) =>
 {
-    if (await db.Clients.FindAsync(v.ClientId) is null) return Results.BadRequest("Cliente não encontrado");
+    if (await db.Clients.FindAsync(v.ClientId) is null)
+        return Results.BadRequest("Cliente não encontrado");
     db.Vehicles.Add(v);
     await db.SaveChangesAsync();
     return Results.Created($"/vehicles/{v.Plate}", v);

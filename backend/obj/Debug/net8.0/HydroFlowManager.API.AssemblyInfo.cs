@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HydroFlowManager.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+791e71acb758b7051154fc5575910528064379cb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+92e49126cf4234ed32f1c3d7027fc0fe58516e3e")]
 [assembly: System.Reflection.AssemblyProductAttribute("HydroFlowManager.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HydroFlowManager.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
