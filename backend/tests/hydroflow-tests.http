@@ -1,18 +1,18 @@
 ### HydroFlow Manager - API Tests
 ### Base URL
-@baseUrl = http://localhost:5000/
-@token = 
+@baseUrl = http://localhost:5000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjcGYiOiIwMDAwMDAwMDAwMCIsIm5hbWUiOiJhZG1pbiIsIm5iZiI6MTc2MzkyNzQ1NywiZXhwIjoxNzYzOTU2MjU3LCJpYXQiOjE3NjM5Mjc0NTd9.2e6m3nBQgMEENYgKJUH9Lh0gdtsk3SllBBiItUr1lJ0
 
 ### ============================================
 ### AUTHENTICATION
 ### ============================================
 
 ### 1. Login - Obter Token JWT
-POST {{baseUrl}}/auth/login
+POST http://localhost:5000/auth/login
 Content-Type: application/json
 
 {
-  "login": "00000000000",
+  "CPF": "00000000000",
   "password": "123456"
 }
 

@@ -6,6 +6,8 @@ using System.Text.Json.Serialization;
 using HydroFlowManager.API.Data;
 using HydroFlowManager.API.Models;
 using HydroFlowManager.API.DTOs;
+using Microsoft.AspNetCore.Authorization;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
@@ -71,6 +73,29 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
 });
 var app = builder.Build();
+app.Use(async (context, next) =>
+{
+    if (!context.Request.Path.StartsWithSegments("/orders"))
+    {
+        await next();
+        return;
+    }
+
+    // se o ModelState tiver erro, logar
+    context.Response.OnStarting(() =>
+    {
+        // Evita depender de tipos internos que podem não existir; em vez disso,
+        // verifica o endpoint resolvido pela request via IEndpointFeature.
+        var endpoint = context.Features.Get<Microsoft.AspNetCore.Http.Features.IEndpointFeature>()?.Endpoint;
+        if (endpoint?.DisplayName?.Contains("HTTP: PUT /orders/{id}") == true)
+        {
+            // aqui seria avançado; em muitos casos não é necessário
+        }
+        return Task.CompletedTask;
+    });
+
+    await next();
+});
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -104,80 +129,160 @@ app.UseSwaggerUI();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapPost("/auth/login", async (LoginDto dto, AppDbContext db) =>
 {
+    Console.WriteLine($"[POST] /auth/login - CPF: {dto.CPF}");
     var att = await db.Attendants.FindAsync(dto.CPF);
-    if (att == null) return Results.Unauthorized();
-    if (!SecurityHelper.VerifyPassword(dto.Password, att.PasswordHash, att.PasswordSalt)) return Results.Unauthorized();
+    if (att == null)
+    {
+        Console.WriteLine("❌ Login falhou: CPF não encontrado");
+        return Results.Unauthorized();
+    }
+    if (!SecurityHelper.VerifyPassword(dto.Password, att.PasswordHash, att.PasswordSalt))
+    {
+        Console.WriteLine("❌ Login falhou: senha incorreta");
+        return Results.Unauthorized();
+    }
     var token = SecurityHelper.GenerateToken(att, builder.Configuration["Jwt:Key"]);
+    Console.WriteLine($"✅ Login bem-sucedido: {att.Name}");
     return Results.Ok(new { token });
 });
+
 // Endpoints de leitura públicos para facilitar o consumo pelo frontend sem token
-app.MapGet("/clients", async (AppDbContext db) => await db.Clients.ToListAsync());
-app.MapPost("/clients", [Microsoft.AspNetCore.Authorization.Authorize] async (Client c, AppDbContext db) =>
+app.MapGet("/clients", async (AppDbContext db) =>
 {
-    if (await db.Clients.AnyAsync(x => x.CPFCNPJ == c.CPFCNPJ)) return Results.Conflict("Cliente já existe");
+    Console.WriteLine("[GET] /clients");
+    return await db.Clients.ToListAsync();
+});
+
+app.MapPost("/clients", [Authorize] async (Client c, AppDbContext db) =>
+{
+    Console.WriteLine($"[POST] /clients - Nome: {c.Name}, CPF/CNPJ: {c.CPFCNPJ}");
+    if (await db.Clients.AnyAsync(x => x.CPFCNPJ == c.CPFCNPJ))
+    {
+        Console.WriteLine("❌ Cliente já existe");
+        return Results.Conflict("Cliente já existe");
+    }
     db.Clients.Add(c);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Cliente criado com sucesso");
     return Results.Created($"/clients/{c.CPFCNPJ}", c);
 });
-app.MapPut("/clients/{cpfcnpj}", [Microsoft.AspNetCore.Authorization.Authorize] async (string cpfcnpj, Client updated, AppDbContext db) =>
+
+app.MapPut("/clients/{cpfcnpj}", [Authorize] async (string cpfcnpj, Client updated, AppDbContext db) =>
 {
+    Console.WriteLine($"[PUT] /clients/{cpfcnpj}");
     var client = await db.Clients.FindAsync(cpfcnpj);
-    if (client is null) return Results.NotFound("Cliente não encontrado");
+    if (client is null)
+    {
+        Console.WriteLine("❌ Cliente não encontrado");
+        return Results.NotFound("Cliente não encontrado");
+    }
     client.Name = updated.Name;
     client.Email = updated.Email;
     client.Phone = updated.Phone;
     client.Observations = updated.Observations;
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Cliente atualizado com sucesso");
     return Results.Ok(client);
 });
-app.MapDelete("/clients/{cpfcnpj}", [Microsoft.AspNetCore.Authorization.Authorize] async (string cpfcnpj, AppDbContext db) =>
+
+app.MapDelete("/clients/{cpfcnpj}", [Authorize] async (string cpfcnpj, AppDbContext db) =>
 {
+    Console.WriteLine($"[DELETE] /clients/{cpfcnpj}");
     var client = await db.Clients.FindAsync(cpfcnpj);
-    if (client is null) return Results.NotFound("Cliente não encontrado");
+    if (client is null)
+    {
+        Console.WriteLine("❌ Cliente não encontrado");
+        return Results.NotFound("Cliente não encontrado");
+    }
     db.Clients.Remove(client);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Cliente removido com sucesso");
     return Results.NoContent();
 });
-app.MapGet("/vehicles", async (AppDbContext db) => await db.Vehicles.Include(v => v.Client).ToListAsync());
-app.MapPost("/vehicles", [Microsoft.AspNetCore.Authorization.Authorize] async (Vehicle v, AppDbContext db) =>
+
+app.MapGet("/vehicles", async (AppDbContext db) =>
 {
+    Console.WriteLine("[GET] /vehicles");
+    return await db.Vehicles.Include(v => v.Client).ToListAsync();
+});
+
+app.MapPost("/vehicles", [Authorize] async (Vehicle v, AppDbContext db) =>
+{
+    Console.WriteLine($"[POST] /vehicles - Placa: {v.Plate}, Tipo: {v.Type}");
     if (await db.Clients.FindAsync(v.ClientId) is null)
+    {
+        Console.WriteLine("❌ Cliente não encontrado");
         return Results.BadRequest("Cliente não encontrado");
+    }
     db.Vehicles.Add(v);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Veículo criado com sucesso");
     return Results.Created($"/vehicles/{v.Plate}", v);
 });
-app.MapPut("/vehicles/{plate}", [Microsoft.AspNetCore.Authorization.Authorize] async (string plate, Vehicle updated, AppDbContext db) =>
+
+app.MapPut("/vehicles/{plate}", [Authorize] async (string plate, Vehicle updated, AppDbContext db) =>
 {
+    Console.WriteLine($"[PUT] /vehicles/{plate}");
     var vehicle = await db.Vehicles.FindAsync(plate);
-    if (vehicle is null) return Results.NotFound("Veículo não encontrado");
-    if (await db.Clients.FindAsync(updated.ClientId) is null) return Results.BadRequest("Cliente não encontrado");
+    if (vehicle is null)
+    {
+        Console.WriteLine("❌ Veículo não encontrado");
+        return Results.NotFound("Veículo não encontrado");
+    }
+    if (await db.Clients.FindAsync(updated.ClientId) is null)
+    {
+        Console.WriteLine("❌ Cliente não encontrado");
+        return Results.BadRequest("Cliente não encontrado");
+    }
     vehicle.Type = updated.Type;
     vehicle.ClientId = updated.ClientId;
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Veículo atualizado com sucesso");
     return Results.Ok(vehicle);
 });
-app.MapDelete("/vehicles/{plate}", [Microsoft.AspNetCore.Authorization.Authorize] async (string plate, AppDbContext db) =>
+
+app.MapDelete("/vehicles/{plate}", [Authorize] async (string plate, AppDbContext db) =>
 {
+    Console.WriteLine($"[DELETE] /vehicles/{plate}");
     var vehicle = await db.Vehicles.FindAsync(plate);
-    if (vehicle is null) return Results.NotFound("Veículo não encontrado");
+    if (vehicle is null)
+    {
+        Console.WriteLine("❌ Veículo não encontrado");
+        return Results.NotFound("Veículo não encontrado");
+    }
     db.Vehicles.Remove(vehicle);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Veículo removido com sucesso");
     return Results.NoContent();
 });
-app.MapGet("/services", async (AppDbContext db) => await db.Services.ToListAsync());
-app.MapPost("/services", [Microsoft.AspNetCore.Authorization.Authorize] async (Service s, AppDbContext db) =>
+
+app.MapGet("/services", async (AppDbContext db) =>
 {
+    Console.WriteLine("[GET] /services");
+    return await db.Services.ToListAsync();
+});
+
+app.MapPost("/services", [Authorize] async (Service s, AppDbContext db) =>
+{
+    Console.WriteLine($"[POST] /services - Nome: {s.Name}");
     db.Services.Add(s);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Serviço criado com sucesso");
     return Results.Created($"/services/{s.Id}", s);
 });
-app.MapPut("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (int id, Service updated, AppDbContext db) =>
+
+app.MapPut("/services/{id}", [Authorize] async (int id, Service updated, AppDbContext db) =>
 {
+    Console.WriteLine($"[PUT] /services/{id}");
     var service = await db.Services.FindAsync(id);
-    if (service is null) return Results.NotFound("Serviço não encontrado");
+    if (service is null)
+    {
+        Console.WriteLine("❌ Serviço não encontrado");
+        return Results.NotFound("Serviço não encontrado");
+    }
     service.Name = updated.Name;
     service.PriceMotorcycle = updated.PriceMotorcycle;
     service.PriceCarSmall = updated.PriceCarSmall;
@@ -185,28 +290,43 @@ app.MapPut("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] asyn
     service.DurationMinutes = updated.DurationMinutes;
     service.Active = updated.Active;
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Serviço atualizado com sucesso");
     return Results.Ok(service);
 });
-app.MapDelete("/services/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (int id, AppDbContext db) =>
+
+app.MapDelete("/services/{id}", [Authorize] async (int id, AppDbContext db) =>
 {
+    Console.WriteLine($"[DELETE] /services/{id}");
     var service = await db.Services.FindAsync(id);
-    if (service is null) return Results.NotFound("Serviço não encontrado");
+    if (service is null)
+    {
+        Console.WriteLine("❌ Serviço não encontrado");
+        return Results.NotFound("Serviço não encontrado");
+    }
     db.Services.Remove(service);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Serviço removido com sucesso");
     return Results.NoContent();
 });
+
 app.MapGet("/orders", async (AppDbContext db) =>
-    await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).ToListAsync());
-app.MapGet("/orders/{id}", async (Guid id, AppDbContext db) =>
 {
-    var order = await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).FirstOrDefaultAsync(o => o.Id == id);
-    if (order is null) return Results.NotFound("Ordem não encontrada");
-    return Results.Ok(order);
+    //Console.WriteLine("[GET] /orders");
+    Console.WriteLine("🚀 [GET] /orders foi chamado");
+    return await db.Orders.Include(o => o.Vehicle).ThenInclude(v => v.Client).Include(o => o.Items).Include(o => o.Attendant).ToListAsync();
 });
-app.MapPost("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (OrderCreateDto dto, AppDbContext db) =>
+
+
+
+app.MapPost("/orders", [Authorize] async (OrderCreateDto dto, AppDbContext db) =>
 {
+    Console.WriteLine($"[POST] /orders - Veículo: {dto.VehiclePlate}, Atendente: {dto.AttendantCPF}");
     var vehicle = await db.Vehicles.FindAsync(dto.VehiclePlate);
-    if (vehicle is null) return Results.BadRequest("Veículo não encontrado");
+    if (vehicle is null)
+    {
+        Console.WriteLine("❌ Veículo não encontrado");
+        return Results.BadRequest("Veículo não encontrado");
+    }
     var order = new Order
     {
         Id = Guid.NewGuid(),
@@ -219,7 +339,11 @@ app.MapPost("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (Ord
     foreach (var it in dto.Items)
     {
         var svc = await db.Services.FindAsync(it.ServiceId);
-        if (svc is null) return Results.BadRequest($"Serviço {it.ServiceId} não encontrado");
+        if (svc is null)
+        {
+            Console.WriteLine($"❌ Serviço {it.ServiceId} não encontrado");
+            return Results.BadRequest($"Serviço {it.ServiceId} não encontrado");
+        }
         var price = svc.GetPriceFor(vehicle.Type);
         var oi = new OrderItem { ServiceId = svc.Id, Quantity = it.Quantity, UnitPrice = price };
         order.Items.Add(oi);
@@ -231,26 +355,156 @@ app.MapPost("/orders", [Microsoft.AspNetCore.Authorization.Authorize] async (Ord
     order.PaymentMethod = dto.PaymentMethod;
     db.Orders.Add(order);
     await db.SaveChangesAsync();
+    Console.WriteLine($"✅ Ordem criada com sucesso: ID={order.Id}, Total={order.Total}");
     return Results.Created($"/orders/{order.Id}", order);
 });
-app.MapPut("/orders/{id}/status", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, OrderStatus status, AppDbContext db) =>
+
+app.MapPut("/orders/{id}/status", [Authorize] async (Guid id, OrderStatus status, AppDbContext db) =>
 {
+    Console.WriteLine($"[PUT] /orders/{id}/status - Novo status: {status}");
     var order = await db.Orders.FindAsync(id);
-    if (order is null) return Results.NotFound("Ordem não encontrada");
+    if (order is null)
+    {
+        Console.WriteLine("❌ Ordem não encontrada");
+        return Results.NotFound("Ordem não encontrada");
+    }
+
     order.Status = status;
+    await db.SaveChangesAsync();
+    Console.WriteLine($"✅ Status da ordem atualizado para: {status}");
+    return Results.Ok(order);
+});
+
+// 🔥 ENDPOINT EDITAR ORDEM DE SERVIÇO - COM LOGS
+app.MapPut("/orders/{id}", [Authorize] async (Guid id, OrderUpdateDto dto, AppDbContext db) =>
+{
+    Console.WriteLine("🔧 [PUT] /orders/{id} - EDITAR ORDEM DE SERVIÇO");
+    Console.WriteLine($"   ID recebido: {id}");
+
+    try
+    {
+        Console.WriteLine("   DTO recebido (JSON): " + JsonSerializer.Serialize(dto));
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("   (não foi possível serializar o DTO recebido) " + ex.Message);
+    }
+
+    var order = await db.Orders
+        .Include(o => o.Items)
+        .Include(o => o.Vehicle) // se ainda não estiver incluído
+        .FirstOrDefaultAsync(o => o.Id == id);
+
+    if (order is null)
+    {
+        Console.WriteLine("   ❌ Ordem não encontrada no banco.");
+        return Results.NotFound("Ordem não encontrada");
+    }
+
+    Console.WriteLine($"   Ordem encontrada: Status={order.Status}, Total atual={order.Total}");
+
+    if (order.Status != OrderStatus.Open)
+    {
+        Console.WriteLine("   ❌ Ordem não está em status Open. Edição não permitida.");
+        return Results.BadRequest("Só é possível editar ordens em aberto");
+    }
+
+    Console.WriteLine("   🔄 Limpando itens antigos da ordem...");
+    order.Items.Clear();
+    decimal newTotal = 0;
+
+    if (dto.Items is null || dto.Items.Count == 0)
+    {
+        Console.WriteLine("   ⚠️ DTO.Items está vazio ou null.");
+    }
+    else
+    {
+        Console.WriteLine($"   DTO.Items contém {dto.Items.Count} item(ns).");
+
+        foreach (var it in dto.Items)
+        {
+            Console.WriteLine($"   -> Processando item: ServiceId={it.ServiceId}, Quantity={it.Quantity}");
+
+            var svc = await db.Services.FindAsync(it.ServiceId);
+            if (svc is null)
+            {
+                Console.WriteLine($"   ❌ Serviço {it.ServiceId} não encontrado no banco!");
+                return Results.BadRequest($"Serviço {it.ServiceId} não encontrado");
+            }
+
+            // aqui você usa seu método de preço por tipo de veículo
+            var unitPrice = svc.GetPriceFor(order.Vehicle.Type);
+
+            var newItem = new OrderItem
+            {
+                OrderId = order.Id,
+                ServiceId = svc.Id,
+                Quantity = it.Quantity,
+                UnitPrice = unitPrice
+            };
+            order.Items.Add(newItem);
+            newTotal += unitPrice * it.Quantity;
+        }
+    }
+
+    // converte int -> enum de volta
+    order.PaymentMethod = (PaymentMethod)dto.PaymentMethod;
+
+    order.Total = newTotal;
+
+    Console.WriteLine($"   ✅ Ordem editada com sucesso! Novo total = {order.Total}, PaymentMethod = {order.PaymentMethod}");
+
     await db.SaveChangesAsync();
     return Results.Ok(order);
 });
-app.MapDelete("/orders/{id}", [Microsoft.AspNetCore.Authorization.Authorize] async (Guid id, AppDbContext db) =>
+
+// 🔥 ENDPOINT CONFIRMAR PAGAMENTO - COM LOGS
+app.MapPut("/orders/{id}/pay", [Authorize] async (Guid id, OrderPaymentDto dto, AppDbContext db) =>
 {
+    Console.WriteLine($"💰 [PUT] /orders/{id}/pay - CONFIRMAR PAGAMENTO");
+    Console.WriteLine($"   Método de pagamento: {dto.PaymentMethod}");
+
+    var order = await db.Orders.FindAsync(id);
+    if (order is null)
+    {
+        Console.WriteLine("❌ Ordem não encontrada");
+        return Results.NotFound("Ordem não encontrada");
+    }
+
+    Console.WriteLine($"   Ordem encontrada: Status={order.Status}, Total={order.Total}");
+
+    if (order.Status != OrderStatus.Open)
+    {
+        Console.WriteLine("❌ Só é possível confirmar pagamento de ordens em aberto");
+        return Results.BadRequest("Só é possível confirmar pagamento de ordens em aberto");
+    }
+
+    order.PaymentMethod = dto.PaymentMethod;
+    order.Status = OrderStatus.Paid;
+
+    await db.SaveChangesAsync();
+    Console.WriteLine($"✅ Pagamento confirmado! Status alterado para: {order.Status}");
+    return Results.Ok(order);
+});
+
+app.MapDelete("/orders/{id}", [Authorize] async (Guid id, AppDbContext db) =>
+{
+    Console.WriteLine($"[DELETE] /orders/{id}");
     var order = await db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id);
-    if (order is null) return Results.NotFound("Ordem não encontrada");
+    if (order is null)
+    {
+        Console.WriteLine("❌ Ordem não encontrada");
+        return Results.NotFound("Ordem não encontrada");
+    }
     db.Orders.Remove(order);
     await db.SaveChangesAsync();
+    Console.WriteLine("✅ Ordem removida com sucesso");
     return Results.NoContent();
 });
-app.MapGet("/cash/summary", [Microsoft.AspNetCore.Authorization.Authorize] async (DateTime? date, AppDbContext db) =>
+
+app.MapGet("/cash/summary", [Authorize] async (DateTime? date, AppDbContext db) =>
 {
+    Console.WriteLine($"[GET] /cash/summary - Data: {date?.ToString("yyyy-MM-dd") ?? "hoje"}");
     var target = date?.Date ?? DateTime.UtcNow.Date;
     var orders = await db.Orders.Include(o => o.Items).Where(o => o.CreatedAt.Date == target).ToListAsync();
     var totalOrders = orders.Count;
@@ -258,6 +512,7 @@ app.MapGet("/cash/summary", [Microsoft.AspNetCore.Authorization.Authorize] async
     var totalDescontos = orders.Sum(x => x.Discount);
     var byPayment = orders.GroupBy(x => x.PaymentMethod).Select(g => new { Payment = g.Key.ToString(), Total = g.Sum(x => x.Total) }).ToList();
     var byService = orders.SelectMany(o => o.Items).GroupBy(i => i.ServiceId).Select(g => new { ServiceId = g.Key, Quantity = g.Sum(i => i.Quantity), Total = g.Sum(i => i.UnitPrice * i.Quantity) }).ToList();
+    Console.WriteLine($"✅ Resumo: {totalOrders} ordens, Receita total: {totalReceita}");
     return Results.Ok(new { Date = target, TotalOrders = totalOrders, TotalReceita = totalReceita, TotalDescontos = totalDescontos, ByPayment = byPayment, ByService = byService });
 });
 
