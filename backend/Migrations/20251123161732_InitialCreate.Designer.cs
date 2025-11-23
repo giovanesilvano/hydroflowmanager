@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace HydroFlowManager.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251123151940_InitialCreate")]
+    [Migration("20251123161732_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -74,6 +74,9 @@ namespace HydroFlowManager.API.Migrations
                     b.Property<string>("AttendantCPF")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ClientCPFCNPJ")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -99,6 +102,8 @@ namespace HydroFlowManager.API.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AttendantCPF");
+
+                    b.HasIndex("ClientCPFCNPJ");
 
                     b.HasIndex("VehiclePlate");
 
@@ -188,6 +193,10 @@ namespace HydroFlowManager.API.Migrations
                         .HasForeignKey("AttendantCPF")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("HydroFlowManager.API.Models.Client", null)
+                        .WithMany("Orders")
+                        .HasForeignKey("ClientCPFCNPJ");
+
                     b.HasOne("HydroFlowManager.API.Models.Vehicle", "Vehicle")
                         .WithMany("Orders")
                         .HasForeignKey("VehiclePlate")
@@ -227,6 +236,8 @@ namespace HydroFlowManager.API.Migrations
 
             modelBuilder.Entity("HydroFlowManager.API.Models.Client", b =>
                 {
+                    b.Navigation("Orders");
+
                     b.Navigation("Vehicles");
                 });
 

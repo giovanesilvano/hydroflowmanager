@@ -89,7 +89,8 @@ namespace HydroFlowManager.API.Migrations
                     Subtotal = table.Column<decimal>(type: "TEXT", nullable: false),
                     Discount = table.Column<decimal>(type: "TEXT", nullable: false),
                     Total = table.Column<decimal>(type: "TEXT", nullable: false),
-                    PaymentMethod = table.Column<int>(type: "INTEGER", nullable: false)
+                    PaymentMethod = table.Column<int>(type: "INTEGER", nullable: false),
+                    ClientCPFCNPJ = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -100,6 +101,11 @@ namespace HydroFlowManager.API.Migrations
                         principalTable: "Attendants",
                         principalColumn: "CPF",
                         onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Orders_Clients_ClientCPFCNPJ",
+                        column: x => x.ClientCPFCNPJ,
+                        principalTable: "Clients",
+                        principalColumn: "CPFCNPJ");
                     table.ForeignKey(
                         name: "FK_Orders_Vehicles_VehiclePlate",
                         column: x => x.VehiclePlate,
@@ -150,6 +156,11 @@ namespace HydroFlowManager.API.Migrations
                 name: "IX_Orders_AttendantCPF",
                 table: "Orders",
                 column: "AttendantCPF");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Orders_ClientCPFCNPJ",
+                table: "Orders",
+                column: "ClientCPFCNPJ");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Orders_VehiclePlate",
