@@ -37,22 +37,23 @@ export default function Vehicles({ token }) {
         try {
             if (editing) {
                 await axios.put(`http://localhost:5000/vehicles/${editing}`, {
-                    Plate: form.plate,
-                    Type: parseInt(form.type),
-                    ClientId: form.clientId
+                    plate: form.plate,
+                    type: parseInt(form.type),
+                    clientCpfCnpj: form.clientId  // ✅ Mudança aqui
                 }, { headers: { Authorization: 'Bearer ' + token } });
                 setEditing(null);
             } else {
                 await axios.post('http://localhost:5000/vehicles', {
-                    Plate: form.plate,
-                    Type: parseInt(form.type),
-                    ClientId: form.clientId
+                    plate: form.plate,
+                    type: parseInt(form.type),
+                    clientCpfCnpj: form.clientId  // ✅ Mudança aqui
                 }, { headers: { Authorization: 'Bearer ' + token } });
             }
             setForm({ plate: '', type: 0, clientId: '' });
             fetchVehicles();
         } catch (e) {
-            alert('Erro ao salvar veículo');
+            console.error('Erro detalhado:', e.response?.data);  // ✅ Melhor tratamento de erro
+            alert('Erro ao salvar veículo: ' + (e.response?.data || e.message));
         }
     }
 

@@ -53,7 +53,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
         };
     });
-builder.Services.AddAuthorization();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -63,6 +63,7 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader();
     });
 });
+builder.Services.AddAuthorization();
 // Serializar/Desserializar enums como strings para compatibilidade com o frontend
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -72,7 +73,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    
+    // ✅ Aplica migrations pendentes automaticamente
+    db.Database.Migrate();
+    
     if (!db.Attendants.Any())
     {
         var salt = SecurityHelper.GenerateSalt();
@@ -81,7 +85,6 @@ using (var scope = app.Services.CreateScope())
         db.SaveChanges();
     }
 
-    // Seed de serviços padrão para facilitar testes no frontend
     if (!db.Services.Any())
     {
         db.Services.AddRange(new[]

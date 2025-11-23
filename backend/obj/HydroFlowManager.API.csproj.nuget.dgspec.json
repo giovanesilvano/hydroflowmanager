@@ -1,31 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\guilh\\OneDrive\\Documentos\\Programação\\Positivo\\HydroFlowManager\\HydroFlowManager\\backend\\HydroFlowManager.API.csproj": {}
+    "/home/giovanes/Documentos/Faculdade/Desenvolvimento de software visual/hydroflowmanager/backend/HydroFlowManager.API.csproj": {}
   },
   "projects": {
-    "C:\\Users\\guilh\\OneDrive\\Documentos\\Programação\\Positivo\\HydroFlowManager\\HydroFlowManager\\backend\\HydroFlowManager.API.csproj": {
+    "/home/giovanes/Documentos/Faculdade/Desenvolvimento de software visual/hydroflowmanager/backend/HydroFlowManager.API.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\guilh\\OneDrive\\Documentos\\Programação\\Positivo\\HydroFlowManager\\HydroFlowManager\\backend\\HydroFlowManager.API.csproj",
+        "projectUniqueName": "/home/giovanes/Documentos/Faculdade/Desenvolvimento de software visual/hydroflowmanager/backend/HydroFlowManager.API.csproj",
         "projectName": "HydroFlowManager.API",
-        "projectPath": "C:\\Users\\guilh\\OneDrive\\Documentos\\Programação\\Positivo\\HydroFlowManager\\HydroFlowManager\\backend\\HydroFlowManager.API.csproj",
-        "packagesPath": "C:\\Users\\guilh\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\guilh\\OneDrive\\Documentos\\Programação\\Positivo\\HydroFlowManager\\HydroFlowManager\\backend\\obj\\",
+        "projectPath": "/home/giovanes/Documentos/Faculdade/Desenvolvimento de software visual/hydroflowmanager/backend/HydroFlowManager.API.csproj",
+        "packagesPath": "/home/giovanes/.nuget/packages/",
+        "outputPath": "/home/giovanes/Documentos/Faculdade/Desenvolvimento de software visual/hydroflowmanager/backend/obj/",
         "projectStyle": "PackageReference",
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\guilh\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+          "/home/giovanes/.nuget/NuGet/NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -38,21 +32,23 @@
           "warnAsError": [
             "NU1605"
           ]
-        },
-        "restoreAuditProperties": {
-          "enableAudit": "true",
-          "auditLevel": "low",
-          "auditMode": "direct"
-        },
-        "SdkAnalysisLevel": "10.0.100"
+        }
       },
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
           "dependencies": {
+            "EntityFramework": {
+              "target": "Package",
+              "version": "[6.5.1, )"
+            },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
               "version": "[8.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[8.0.21, )"
             },
             "Microsoft.EntityFrameworkCore.Design": {
               "target": "Package",
@@ -60,7 +56,7 @@
             },
             "Microsoft.EntityFrameworkCore.Sqlite": {
               "target": "Package",
-              "version": "[8.0.0, )"
+              "version": "[8.0.21, )"
             },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
@@ -78,24 +74,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.win-x64",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.WindowsDesktop.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -104,7 +82,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.121/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

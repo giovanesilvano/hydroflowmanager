@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
 namespace HydroFlowManager.API.Models
 {
@@ -13,6 +14,7 @@ namespace HydroFlowManager.API.Models
         public List<Order> Orders { get; set; } = new();
 
         // Alias para compatibilidade com o frontend: permite enviar "clientCpfCnpj" no payload
+        [NotMapped]
         [JsonPropertyName("clientCpfCnpj")]
         public string ClientCpfCnpj
         {
